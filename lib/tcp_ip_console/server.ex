@@ -8,7 +8,6 @@ defmodule TcpIpConsole.Server do
   TIME        -> UTC ISO-8601 timestamp
   UPTIME      -> seconds since boot
   GET         -> get data in list
-  PUSH text   -> push data in list
   ECHO text…  -> repeats the text
   HELP        -> show this menu again
   CLEAR/CLS   -> clear screen
@@ -41,14 +40,13 @@ defmodule TcpIpConsole.Server do
 
   @impl true
   def handle_cast({:push, element}, state) do
-    value =
-      case Map.fetch(state, :comandos) do
-        {:ok, values} -> [element | values]
-        :error -> [element]
-      end
+    case Map.get(state, :comandos) do
+      nil -> Map.put(state, :comandos, [element])
+      values -> Map.put(state, :comandos, [element | values])
+    end
 
-    new_state = Map.put(state, :comandos, value)
-    {:noreply, new_state}
+    # new_state = [element | state]
+    {:noreply, state}
   end
 
   @impl true
@@ -97,17 +95,8 @@ defmodule TcpIpConsole.Server do
   defp handle_command("TIME"), do: DateTime.utc_now() |> DateTime.to_iso8601()
   # defp handle_command("UPTIME"), do: "up #{System.system_time(:second) - boot_time()} s"
   defp handle_command("UPTIME"), do: "up #{boot_time()} "
-
-  defp handle_command("PUSH " <> elemento) do
-    :ok = push(String.trim(elemento))
-    "element added"
-  end
-
-  defp handle_command("GET") do
-    datos = get()
-    "comandos: #{inspect(datos)}"
-  end
-
+  defp handle_command("PUSH " <> elemento), do: push(elemento)
+  defp handle_command("GET"), do: "datos: #{inspect(get())} "
   defp handle_command("PID"), do: "pid: #{inspect(Kernel.self())}"
   defp handle_command("ECHO " <> rest), do: String.trim(rest)
   defp handle_command("ECHO"), do: "(nothing to echo)"
